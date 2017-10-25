@@ -24,7 +24,7 @@
 #define PIN_PADDLE_L      12  // digital pin for paddle right (dash)
 
 #define PIN_KEYER_SPEED    3  // analogue pin for speed potentiometer  
-#define CW_TONE_HZ       700  // analogue pin for speed potentiometer  
+#define CW_TONE_HZ       700  // CW tone frequency (Hz)  
 
 #define CW_DASH_LEN        5  // length of dash (in dots)
 #define BREAK_IN_DELAY   800  // break-in hang time (mS)
