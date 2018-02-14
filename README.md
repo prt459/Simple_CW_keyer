@@ -21,3 +21,12 @@ All parameters are #define'd at the top and should be self-explanatory.
 
 The script also provides a CW Ident, sends callsign every CW_IDENT_SECS seconds (set to 180).  
 To activate this feature, #define CW_IDENT.
+
+NOTE: The master code includes enums -- these may generate compile time errros like these:
+  key:42: error: variable or field ‘set_key_state’ declared void
+  key:42: error: ‘key_state_e’ was not declared in this scope
+  key:43: error: variable or field ‘activate_state’ declared void
+  key:43: error: ‘trx_state_e’ was not declared in this scope
+  variable or field ‘set_key_state’ declared void
+  
+  A version without enums is on branch s'ans_enums' -- if you have problems compiling the master, use the code on this branch instead.  
