@@ -29,4 +29,4 @@ NOTE: The master code includes enums -- these may generate compile time errros l
   key:43: error: ‘trx_state_e’ was not declared in this scope
   variable or field ‘set_key_state’ declared void
   
-  A version without enums is on branch s'ans_enums' -- if you have problems compiling the master, use the code on this branch instead.  
+  A version without enums is on branch 'sans_enums' -- if you have problems compiling the master, use the code on this branch instead.  
