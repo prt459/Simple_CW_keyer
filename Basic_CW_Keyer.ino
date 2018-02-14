@@ -1,6 +1,10 @@
 // Basic CW memory keyer, for Arduino Nano, by VK3HN, 7 Apr 2017.  
 // Description and wiring diagram at https://vk3hn.wordpress.com/Arduino-CW-keyer-for-a-BiTx-or-other-homebrew-rig
 //  
+// Mods by Jerry W0PWE to remove enums, 13 Feb 2018.
+// Mods **** D13 used as keying LED indicator
+//
+//
 //  Keyed line is D2 
 //  PTT line is D3
 //  Tone out is D8 (use 8 ohm speaker with 220 ohm series resistor to earth)
@@ -15,7 +19,7 @@
 
 // #define CW_IDENT   // uncomment to activate CW Ident 
 
-#define PIN_KEY_LINE       2  // digital pin for the key line (mirrors PIN_TONE_OUT)
+#define PIN_KEY_LINE      13  // digital pin for the key line (mirrors PIN_TONE_OUT) //****was pin2
 #define PIN_PTT_LINE       3  // digital pin for the PTT line
 #define PIN_TONE_OUT       8  // digital pin with keyed audio tone on it
 #define PIN_KEYER_MEM1     9  // digital pin to read pushbutton Keyer Memory 1 
@@ -24,28 +28,23 @@
 #define PIN_PADDLE_L      12  // digital pin for paddle right (dash)
 
 #define PIN_KEYER_SPEED    3  // analogue pin for speed potentiometer  
-#define CW_TONE_HZ       700  // CW tone frequency (Hz)  
+#define CW_TONE_HZ       700  // analogue pin for speed potentiometer  
 
-#define CW_DASH_LEN        5  // length of dash (in dots)
+#define CW_DASH_LEN        3  // length of dash (in dots)
 #define BREAK_IN_DELAY   800  // break-in hang time (mS)
 #define SERIAL_LINE_WIDTH 80  // number of morse chars on Serial after which we newline 
 
 #define CW_IDENT_SECS     180  // seconds between CW ident 
 #define CW_IDENT_WPM      70  // CW ident speed (dot length mS)
 
+#define STATE_RX        0    
+#define STATE_TX        1    
 
-enum trx_state_e {
-  E_STATE_RX, 
-  E_STATE_TX
-};  // state of the txcvr 
+#define KEY_UP      0 
+#define KEY_DOWN    1  
 
-trx_state_e curr_state;
-
-enum key_state_e {
-  E_KEY_UP, 
-  E_KEY_DOWN
-};  // state of the key line 
-key_state_e key_state;
+bool curr_state;   
+bool key_state;     
 
 int char_sent_ms, curr_ms;
 int dot_length_ms = 60;   // keyer base speed (60 equates to 10 w.p.m.)
@@ -137,11 +136,11 @@ bool get_button(byte btn)
 int read_analogue_pin(byte p)
 {
 // Take an averaged reading of analogue pin 'p'  
-  int i, val=0, nbr_reads=2; 
+  int i, val=0, nbr_reads=4; 
   for (i=0; i<nbr_reads; i++)
   {
     val += analogRead(p);
-    delay(5); 
+    delay(3); 
   }
   return val/nbr_reads; 
 }
@@ -149,8 +148,7 @@ int read_analogue_pin(byte p)
 int read_keyer_speed()
 { 
   int n = read_analogue_pin((byte)PIN_KEYER_SPEED);
-  //Serial.print("Speed returned=");
-  //Serial.println(n);
+  //Serial.print("Speed returned="); Serial.println(n);
   dot_length_ms = 60 + (n-183)/5;   // scale to wpm (10 wpm == 60mS dot length)
                                      // '511' should be mid point of returned range
                                      // change '5' to widen/narrow speed range...
@@ -158,46 +156,48 @@ int read_keyer_speed()
   return n;
 }
 
-void set_key_state(key_state_e k)
+
+void set_key_state(bool k) 
 {
 // push the morse key down, or let it spring back up
-// changes global 'key_state' {E_KEY_DOWN, E_KEY_UP}
+// changes global 'key_state' {KEY_DOWN, KEY_UP}
 
   switch (k)
   {
-      case E_KEY_DOWN:
+      case KEY_DOWN:          
       {
         // do whatever you need to key the transmitter
         digitalWrite(PIN_KEY_LINE, 1);
-        digitalWrite(13, 1);  // for now, turn the Nano's LED on
-        key_state = E_KEY_DOWN;
+        digitalWrite(13, 1);  // for now, turn the Nano's LED on        
+        key_state = KEY_DOWN;               
         // Serial.println("key down");
       }
       break;
-
-      case E_KEY_UP:
+      
+      case KEY_UP:
       {
         // do whatever you need to un-key the transmitter 
         digitalWrite(PIN_KEY_LINE, LOW);
         digitalWrite(13, 0);  // for now, turn the Nano's LED off
-        key_state = E_KEY_UP;
+        key_state = KEY_UP;   
         char_sent_ms = millis();
         space_inserted = false;
-        // Serial.println("key down");
+        // Serial.println("key up");
       }
       break;
   }    
 }
 
-void activate_state(trx_state_e s)
+void activate_state(bool s)   
 {
 // if necessary, activate the receiver or the transmitter 
 // changes global 'curr_state' {E_STATE_RX, E_STATE_TX}
+
   switch (s)
   {
-      case E_STATE_RX:
+      case STATE_RX: 
       {
-        if(curr_state == E_STATE_RX)
+           if(curr_state == STATE_RX) 
         {
           // already in receive state, nothing to do!
         }
@@ -206,16 +206,16 @@ void activate_state(trx_state_e s)
           // turn transmitter off (drop PTT line)
           digitalWrite(PIN_PTT_LINE, 0); 
           // un-mute receiver
-          curr_state = E_STATE_RX;
-          // Serial.println();
+          curr_state = STATE_RX;  
           Serial.println("\n>Rx");
         }
       }
       break;
-
-      case E_STATE_TX:
+      
+      case STATE_TX: 
       {
-        if(curr_state == E_STATE_TX)
+        if(curr_state == STATE_TX)   
+       
         {
           // already in transmit state, nothing to do!
         }
@@ -223,7 +223,7 @@ void activate_state(trx_state_e s)
         {
           // turn transmitter on (raise PTT line) 
           digitalWrite(PIN_PTT_LINE, 1); 
-          curr_state = E_STATE_TX;
+          curr_state = STATE_TX;   
           Serial.println("\n>Tx");
         }
       }
@@ -236,13 +236,13 @@ void send_dot()
   delay(dot_length_ms);  // wait for one dot period (space)
 
   // send a dot and the following space
-  tone(PIN_TONE_OUT, CW_TONE_HZ);
-  set_key_state(E_KEY_DOWN);
+  tone(PIN_TONE_OUT, CW_TONE_HZ);  // tone on
+  set_key_state(KEY_DOWN); 
   if(ch_counter % SERIAL_LINE_WIDTH == 0) Serial.println(); 
   Serial.print(".");
   delay(dot_length_ms);  // key down for one dot period
   noTone(PIN_TONE_OUT);
-  set_key_state(E_KEY_UP); 
+  set_key_state(KEY_UP);  // tone off
   ch_counter++;
 }
 
@@ -250,25 +250,25 @@ void send_dash()
 {
   delay(dot_length_ms);  // wait for one dot period (space)
   // send a dash and the following space
-  tone(PIN_TONE_OUT, CW_TONE_HZ);
-  set_key_state(E_KEY_DOWN); 
+  tone(PIN_TONE_OUT, CW_TONE_HZ);  // tone on
+  set_key_state(KEY_DOWN); 
   if(ch_counter % SERIAL_LINE_WIDTH == 0) Serial.println(); 
   Serial.print("-");
   delay(dot_length_ms * CW_DASH_LEN);  // key down for CW_DASH_LEN dot periods
-  noTone(PIN_TONE_OUT);
-  set_key_state(E_KEY_UP); 
+  noTone(PIN_TONE_OUT);  // tone off
+  set_key_state(KEY_UP);        
   ch_counter++;
 }
 
 void send_letter_space()
 {
-  delay(dot_length_ms * 4);  // wait for 3 dot periods
+  delay(dot_length_ms * 3);  // wait for 3 dot periods
   Serial.print(" ");
 }
 
 void send_word_space()
 {
-  delay(dot_length_ms * 7);  // wait for 6 dot periods
+  delay(dot_length_ms * 6);  // wait for 6 dot periods
   Serial.print("  ");
 }
 
@@ -300,7 +300,6 @@ void play_message(String m, int s)
   }
 
   digitalWrite(PIN_PTT_LINE, 1); // turn transmitter on 
-
   
   for (i=0; i<m.length(); i++)
   {
@@ -341,7 +340,7 @@ void play_message(String m, int s)
 void setup()
 {
   Serial.begin(9600);  
-  Serial.println("Basic keyer VK3HN v1.0 4-Apr-2017. Please reuse, hack and pass on.");
+  Serial.println("Basic keyer VK3HN v1.1 9-Feb-2017. Please reuse, hack and pass on.");
   Serial.println("If you enjoy this script, leave a comment at http://vk3hn.wordpress.com");
   Serial.println("");
 
@@ -350,16 +349,17 @@ void setup()
   pinMode(PIN_KEYER_MEM1,INPUT_PULLUP);
   pinMode(PIN_KEYER_MEM2,INPUT_PULLUP);
   pinMode(PIN_PTT_LINE,  INPUT_PULLUP);
+  
+  pinMode(LED_BUILTIN, OUTPUT);    
 
   digitalWrite(PIN_PTT_LINE, 0);  // send the PTT line low
 
-  curr_state = E_STATE_RX;
-  key_state = E_KEY_UP;
+  curr_state = STATE_RX;   
+  key_state = KEY_UP;      
   char_sent_ms = millis();
   space_inserted = false;
   paddle_squeezed = false;
   ch_counter = 0;
-
   last_ident_ms = millis(); 
 
   // dump out the MorseCode table for diagnostic
@@ -395,8 +395,8 @@ void loop()
   // see if the paddle has been pressed
   bool l_paddle = get_button(PIN_PADDLE_L);
   bool r_paddle = get_button(PIN_PADDLE_R);
-
-  if(l_paddle or r_paddle) activate_state(E_STATE_TX);
+  
+  if(l_paddle or r_paddle) activate_state(STATE_TX);      
   if(l_paddle) send_dot();
   if(r_paddle) send_dash();
   if(l_paddle and r_paddle) // paddle_squeezed = true;
@@ -407,14 +407,14 @@ void loop()
 
   curr_ms = millis();
   // if paddle has been idle for BREAK_IN_DELAY drop out of transmit 
-  if((curr_state == E_STATE_TX) and (curr_ms - char_sent_ms) > BREAK_IN_DELAY)
+  if((curr_state == STATE_TX) and (curr_ms - char_sent_ms) > BREAK_IN_DELAY)    
   {
     // drop back to receive to implement break-in
-    activate_state(E_STATE_RX); 
+    activate_state(STATE_RX);  
   }
   //-- keyer code ends --------------------------------------------------
-  //-- CW ident code begins ---------------------------------------------
-  
+
+  //-- CW ident code begins ---------------------------------------------  
 #ifdef CW_IDENT
   if(abs(curr_ms - last_ident_ms) > 1000)
   {
@@ -429,11 +429,10 @@ void loop()
 
   if(ident_secs_count == CW_IDENT_SECS)
   {
-    if(curr_state == E_STATE_RX) 
+    if(curr_state == STATE_RX)  
       play_message("VK3HN", CW_IDENT_WPM);  // only Id if not transmitting
     ident_secs_count = 0;
   }
-#endif 
-
+#endif
   //-- CW ident code end ------------------------------------------------
 }
