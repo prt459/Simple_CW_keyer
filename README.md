@@ -1,4 +1,4 @@
-# vk3hn_CW_keyer
+# Simple_CW_keyer
 Basic CW keyer for an Arduino Nano.
 
 Wtitten by Paul VK3HN, 7 Apr 2017.  
