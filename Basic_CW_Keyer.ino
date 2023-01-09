@@ -1,19 +1,40 @@
 // Basic CW memory keyer, for Arduino Nano, by VK3HN, 7 Apr 2017.  
 // Description and wiring diagram at https://vk3hn.wordpress.com/Arduino-CW-keyer-for-a-BiTx-or-other-homebrew-rig
 //  
+// Arduino connections: --------------------------------------------------------------------------------------         
 // Keyed line is D2 
-// PTT line is D3
+// PTT line (to activate a transmitter) is D3
 // Tone out is D8 (use 8 ohm speaker with 220 ohm series resistor to earth)
-// Pushbuttons for 2 (hard-coded) messages are on D9 and D10 (for additional memories, suggest D4, D5, D6, or D7)
+// Pushbuttons for 2 (hard-coded) messages are on D9 and D10 (for additional memories, see notes below)
 // Paddle left and right are D11 and D12 (center earthed) 
 // Wiper of potentiometer across 5v to A3 (keyer speed)
 // All other parameters are #define'd at the top and should be self-explanatory.
 //
-// The script also provides a CW Ident (sends callsign every n seconds),   
+// Adding an extra memory: ------------------------------------------------------------------------------------
+// To add an additional keyer memory:
+//
+// 1. Decide which Arduino digital pin you will use for the additional memory pushbutton (D4 to D7 are avalable) 
+//
+// 2. At line #27 add addtiional $define for the new memory pushbutton (a third memory pushbutton shown here)
+//       #define PIN_KEYER_MEM3     4  // digital pin to read pushbutton Keyer Memory 3 
+//
+// 3. At line #109 Add additional pre-coded keyer message to the msg array 
+//       String morse_msg[] = 
+//       {
+//          "CQ CQ DE VK3HN VK3HN K"
+//          , "CQ CQ SOTA DE VK3HN/P VK3HN/P K" 
+//          , "Message 3"  
+//       };
+//
+// 4. At line #405 add a test for the additional keyer memory, and increment the morse_msg[] index
+//      if(get_button(PIN_KEYER_MEM3)) play_message(morse_msg[2], 0);                                      
+//--------------------------------------------------------------------------------------------------------------
+// CW Ident (sends callsign every n seconds),   
 // to activate this feature, #define CW_IDENT and set CW_IDENT_SECS:
 // #define CW_IDENT   // uncomment to activate CW Ident 
 #define CW_IDENT_SECS     180  // seconds between CW ident 
 #define CW_IDENT_WPM      70  // CW ident speed (dot length mS)
+
 
 // keyer connections and parameters:
 #define PIN_KEY_LINE       2  // digital pin for the key line (mirrors PIN_TONE_OUT)
