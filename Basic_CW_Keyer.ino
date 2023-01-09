@@ -1,37 +1,38 @@
 // Basic CW memory keyer, for Arduino Nano, by VK3HN, 7 Apr 2017.  
 // Description and wiring diagram at https://vk3hn.wordpress.com/Arduino-CW-keyer-for-a-BiTx-or-other-homebrew-rig
 //  
-//  Keyed line is D2 
-//  PTT line is D3
-//  Tone out is D8 (use 8 ohm speaker with 220 ohm series resistor to earth)
-//  Pushbuttons for 2 (hardcoded) messages are on D9 and D10
-//  Paddle left and right are D11 and D12 (center earthed) 
-//  Wiper of potentiometer across 5v to A3 (keyer speed)
-//  All other parameters are #define'd at the top and should be self-explanatory.
+// Keyed line is D2 
+// PTT line is D3
+// Tone out is D8 (use 8 ohm speaker with 220 ohm series resistor to earth)
+// Pushbuttons for 2 (hard-coded) messages are on D9 and D10 (for additional memories, suggest D4, D5, D6, or D7)
+// Paddle left and right are D11 and D12 (center earthed) 
+// Wiper of potentiometer across 5v to A3 (keyer speed)
+// All other parameters are #define'd at the top and should be self-explanatory.
 //
-// The script also provides a CW Ident (sends callsign every n seconds).  
-// To activate this feature, #define CW_IDENT and set CW_IDENT_SECS.
-//
-
+// The script also provides a CW Ident (sends callsign every n seconds),   
+// to activate this feature, #define CW_IDENT and set CW_IDENT_SECS:
 // #define CW_IDENT   // uncomment to activate CW Ident 
+#define CW_IDENT_SECS     180  // seconds between CW ident 
+#define CW_IDENT_WPM      70  // CW ident speed (dot length mS)
 
+// keyer connections and parameters:
 #define PIN_KEY_LINE       2  // digital pin for the key line (mirrors PIN_TONE_OUT)
-#define PIN_PTT_LINE       3  // digital pin for the PTT line
-#define PIN_TONE_OUT       8  // digital pin with keyed audio tone on it
-#define PIN_KEYER_MEM1     9  // digital pin to read pushbutton Keyer Memory 1 
-#define PIN_KEYER_MEM2    10  // digital pin to read pushbutton Keyer Memory 2 
+#define PIN_PTT_LINE       3  // digital pin for the PTT line (to activate a transmitter)
+#define PIN_TONE_OUT       8  // digital pin with keyed audio side-tone on it
 #define PIN_PADDLE_R      11  // digital pin for paddle left (dot)
 #define PIN_PADDLE_L      12  // digital pin for paddle right (dash)
+
+#define PIN_KEYER_MEM1     9  // digital pin to read pushbutton Keyer Memory 1 
+#define PIN_KEYER_MEM2    10  // digital pin to read pushbutton Keyer Memory 2 
+// for additional keyer memories, #define other digital pins here (suggest D4, D5, D6, or D7)
+// #define PIN_KEYER_MEM3  4 // digital pin to read pushbutton Keyer Memory 3 
 
 #define PIN_KEYER_SPEED    3  // analogue pin for speed potentiometer  
 #define CW_TONE_HZ       700  // CW tone frequency (Hz)  
 
-#define CW_DASH_LEN        5  // length of dash (in dots)
-#define BREAK_IN_DELAY   800  // break-in hang time (mS)
-#define SERIAL_LINE_WIDTH 80  // number of morse chars on Serial after which we newline 
-
-#define CW_IDENT_SECS     180  // seconds between CW ident 
-#define CW_IDENT_WPM      70  // CW ident speed (dot length mS)
+#define CW_DASH_LEN        5  // length of dash (in dots)  (typically 3 to 5, changeto suit your preference) 
+#define BREAK_IN_DELAY   500  // break-in hang time (mS)
+#define SERIAL_LINE_WIDTH 80  // number of chars on Serial console, after which we write a newline 
 
 
 enum trx_state_e {
@@ -104,7 +105,16 @@ morse_char_t MorseCode[] = {
   {',', '-', '-', '.', '.', '-', '-'}
 };
 
-String morse_msg[] = {"CQ CQ DE VK3HN VK3HN K", "CQ CQ SOTA DE VK3HN/P VK3HN/P K" };
+// This array of Strings holds the predefined (compiled) keyer memory messages, edit to suit your needs.
+// To add additional memory messages, simply add additional stings in double quotes, separated by a comma.  
+String morse_msg[] = 
+{
+    "CQ CQ DE VK3HN VK3HN K" 
+  , "CQ CQ SOTA DE VK3HN/P VK3HN/P K" 
+// , "message 3"  
+// , "message 4"  
+// , "message  5 etc"  
+};
 
 int morse_lookup(char c)
 // returns the index of parameter 'c' in MorseCode array, or -1 if not found
@@ -119,8 +129,7 @@ int morse_lookup(char c)
 
 bool get_button(byte btn)
 {
-// Read the digital pin 'btn', with debouncing  
-// pins are pulled up (ie. default is HIGH)
+// Read the digital pin 'btn', with debouncing; pins are pulled up (ie. default is HIGH)
 // returns TRUE if pin is high, FALSE otherwise 
   if (!digitalRead(btn)) 
   {
@@ -148,6 +157,9 @@ int read_analogue_pin(byte p)
 
 int read_keyer_speed()
 { 
+  // Connect up a 1k to 10k linear potentiometer that sweeps between 5V and ground, take the wiper to 
+  // analog pin PIN_KEYER_SPEED.  You can adjust the range by reducing the voltage range
+  // with resistors either side of the potentiometer; or, scale here in the code.
   int n = read_analogue_pin((byte)PIN_KEYER_SPEED);
   //Serial.print("Speed returned=");
   //Serial.println(n);
@@ -262,13 +274,13 @@ void send_dash()
 
 void send_letter_space()
 {
-  delay(dot_length_ms * 4);  // wait for 3 dot periods
+  delay(dot_length_ms * 4);  // wait for 3 or 4 dot periods (choose which spacing you prefer)
   Serial.print(" ");
 }
 
 void send_word_space()
 {
-  delay(dot_length_ms * 7);  // wait for 6 dot periods
+  delay(dot_length_ms * 7);  // wait for 6 or 7 dot periods (choose your preference)
   Serial.print("  ");
 }
 
@@ -284,7 +296,8 @@ void send_morse_char(char c)
 void play_message(String m, int s)
 {
 // sends the message in string 'm' as CW, with inter letter and word spacing
-// s is the speed to play at; if s == 0, use the current speed  
+// s is the speed to play at; if s == 0, use the current speed.
+  
   int i, j, n, old_s; 
   char buff[100];
 
@@ -329,6 +342,7 @@ void play_message(String m, int s)
       } // else
     } // else 
   } // for  
+  
   Serial.println();
   if(s > 0)  // reset speed back to what it was  
     dot_length_ms = old_s;
@@ -387,10 +401,9 @@ void loop()
   read_keyer_speed();
 
   // see if a memory button has been pushed
-  if(get_button(PIN_KEYER_MEM1))
-    play_message(morse_msg[0], 0);  
-  if(get_button(PIN_KEYER_MEM2))
-    play_message(morse_msg[1], 0); 
+  if(get_button(PIN_KEYER_MEM1)) play_message(morse_msg[0], 0);  
+  if(get_button(PIN_KEYER_MEM2)) play_message(morse_msg[1], 0); 
+//   if(get_button(PIN_KEYER_MEM3)) play_message(morse_msg[2], 0); 
 
   // see if the paddle has been pressed
   bool l_paddle = get_button(PIN_PADDLE_L);
