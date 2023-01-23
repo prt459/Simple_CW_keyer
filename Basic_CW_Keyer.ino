@@ -1,23 +1,34 @@
 // Basic CW memory keyer, for Arduino Nano, by VK3HN, 7 Apr 2017.  
+// 
+// Supports:
+// - hard coded character weights
+// - hard coded or variable speed using a potentiometer
+// - two or more hard coded messages, with ability to interrupt playing messages
+// - straight key
+// - sidetone
+// - semi-break-in, PTT line to control transmit/receive switching, with configurable drop-out delay  
+// - CW ident (sends hard-coded message (eg. callsign) every n seconds   
+//
 // Description and wiring diagram at https://vk3hn.wordpress.com/Arduino-CW-keyer-for-a-BiTx-or-other-homebrew-rig
 //  
 // Arduino connections: --------------------------------------------------------------------------------------         
 // Keyed line is D2 
-// PTT line (to activate a transmitter) is D3
-// Tone out on D8 (filter before injecting into audio amp; can use piezo or 8 ohm speaker with 220 ohm series resistor to gnd)
+// PTT line (to activate a transmitter) is D3 (works for both keyer and straight key)
+// Tone out on D8 (filter before injecting into audio amp; can use piezo or 8 ohm speaker with 220 ohm series resistor to GND)
 // Pushbuttons for 2 (hard-coded) messages are on D9 and D10 (for additional memories, see notes below)
 //   (squeezing the paddle interrupts the message) 
-// Paddle left and right are D11 and D12 (center earthed) 
+// Paddle left and right are D11 and D12 (center GND) 
+// Straight key may be connected to D4
 // Wiper of potentiometer across 5v to A3 (keyer speed)
 // All other parameters are #define'd at the top and should be self-explanatory.
 //
-// Adding an extra memory: ------------------------------------------------------------------------------------
+// Adding an extra keyer memory: ------------------------------------------------------------------------------------
 // To add an additional keyer memory:
 //
-// 1. Decide which Arduino digital pin you will use for the additional memory pushbutton (D4 to D7 are avalable) 
+// 1. Decide which Arduino digital pin you will use for the additional memory pushbutton (D5 to D7 are avalable) 
 //
 // 2. At line #27 add addtiional $define for the new memory pushbutton (a third memory pushbutton shown here)
-//       #define PIN_KEYER_MEM3     4  // digital pin to read pushbutton Keyer Memory 3 
+//       #define PIN_KEYER_MEM3     5  // digital pin to read pushbutton Keyer Memory 3 
 //
 // 3. At line #109 Add additional pre-coded keyer message to the msg array 
 //       String morse_msg[] = 
@@ -41,12 +52,14 @@
 // keyer connections and parameters:
 #define PIN_KEY_LINE       2  // digital pin for the key line (mirrors PIN_TONE_OUT)
 #define PIN_PTT_LINE       3  // digital pin for the PTT line (to activate a transmitter)
+#define PIN_STRAIGHT_KEY   4  // straight key (to GND)
+
 #define PIN_TONE_OUT       8  // digital pin with keyed audio side-tone on it
 
 #define PIN_KEYER_MEM1     9  // digital pin to read pushbutton Keyer Memory 1 
 #define PIN_KEYER_MEM2    10  // digital pin to read pushbutton Keyer Memory 2 
-// for additional keyer memories, #define other digital pins here (suggest D4, D5, D6, or D7)
-// #define PIN_KEYER_MEM3  4 // digital pin to read pushbutton Keyer Memory 3 
+// for additional keyer memories, #define other digital pins here (suggest D5, D6, or D7)
+// #define PIN_KEYER_MEM3  5 // digital pin to read pushbutton Keyer Memory 3 
 
 #define PIN_PADDLE_R      11  // digital pin for paddle left (dot)
 #define PIN_PADDLE_L      12  // digital pin for paddle right (dash)
@@ -158,13 +171,9 @@ bool get_button(byte btn)
   if (!digitalRead(btn)) 
   {
     delay(5);  // was 20mS, needs to be long enough to ensure debouncing
-    if (!digitalRead(btn))
-    {
-      // while (!digitalRead(btn));  // loop here until button released
-      return 1;                   // now, return 'true' 
-    }
+    if (!digitalRead(btn)) return 1;   // return TRUE
   }
-  return 0;
+  return 0;  // return FALSE
 }
 
 int read_analogue_pin(byte p)
@@ -205,7 +214,7 @@ void set_key_state(key_state_e k)
       {
         // do whatever you need to key the transmitter
         digitalWrite(PIN_KEY_LINE, 1);
-        digitalWrite(13, 1);  // for now, turn the Nano's LED on
+        digitalWrite(13, 1);  // turn the Nano's LED on
         key_state = E_KEY_DOWN;
         // Serial.println("key down");
       }
@@ -215,7 +224,7 @@ void set_key_state(key_state_e k)
       {
         // do whatever you need to un-key the transmitter 
         digitalWrite(PIN_KEY_LINE, LOW);
-        digitalWrite(13, 0);  // for now, turn the Nano's LED off
+        digitalWrite(13, 0);  // turn the Nano's LED off
         key_state = E_KEY_UP;
         char_sent_ms = millis();
         space_inserted = false;
@@ -316,6 +325,19 @@ void send_morse_char(char c)
   // ignore anything else, including 0s
 }
 
+void straight_key_send()
+{
+  // straight key is closed, so send until it goes open
+  tone(PIN_TONE_OUT, CW_TONE_HZ);
+  set_key_state(E_KEY_DOWN); 
+
+  // monitor PIN_STRAIGHT_KEY until it goes open
+  while (get_button(PIN_STRAIGHT_KEY)) delay(10); 
+  
+  noTone(PIN_TONE_OUT);
+  set_key_state(E_KEY_UP); 
+}
+
 
 void play_message(String m, int s)
 {
@@ -388,6 +410,8 @@ void setup()
 
   pinMode(PIN_PADDLE_L,  INPUT_PULLUP);
   pinMode(PIN_PADDLE_R,  INPUT_PULLUP);
+  pinMode(PIN_STRAIGHT_KEY, INPUT_PULLUP);
+
   pinMode(PIN_KEYER_MEM1,INPUT_PULLUP);
   pinMode(PIN_KEYER_MEM2,INPUT_PULLUP);
   pinMode(PIN_PTT_LINE,  INPUT_PULLUP);
@@ -435,8 +459,12 @@ void loop()
   // see if the paddle has been pressed
   bool l_paddle = get_button(PIN_PADDLE_L);
   bool r_paddle = get_button(PIN_PADDLE_R);
+  bool straight_key = get_button(PIN_STRAIGHT_KEY); 
 
-  if(l_paddle or r_paddle) activate_state(E_STATE_TX);
+  // if something was pressed, activate PTT  
+  if(l_paddle or r_paddle or straight_key) activate_state(E_STATE_TX);
+
+  if(straight_key) send_straight_key();
   if(l_paddle) send_dot();
   if(r_paddle) send_dash();
   if(l_paddle and r_paddle) // paddle_squeezed = true;
@@ -453,6 +481,8 @@ void loop()
     activate_state(E_STATE_RX); 
   }
   //-- keyer code ends --------------------------------------------------
+  
+  
   //-- CW ident code begins ---------------------------------------------
   
 #ifdef CW_IDENT
