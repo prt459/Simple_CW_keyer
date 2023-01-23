@@ -6,6 +6,16 @@ A description and wiring diagram is at https://vk3hn.wordpress.com/Arduino-CW-ke
 
 This code may be duplicated, used, and hacked for hobby or experimental purposes. Please acknowledge the source (VK3HN) if you do.
 
+Features:
+ - hard coded character weights
+ - hard coded or variable speed using a potentiometer
+ - two or more hard coded messages, with ability to interrupt playing messages
+ - straight key
+ - sidetone
+ - semi-break-in, PTT line to control transmit/receive switching, with configurable drop-out delay  
+ - CW ident (sends hard-coded message (eg. callsign) every n seconds   
+
+
 The scripts assumes the following use of Nano IO lines: 
 
 D2 - keyed line, goes high with each key-down (dot or dash)  
