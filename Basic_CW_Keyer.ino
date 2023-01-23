@@ -4,8 +4,9 @@
 // Arduino connections: --------------------------------------------------------------------------------------         
 // Keyed line is D2 
 // PTT line (to activate a transmitter) is D3
-// Tone out is D8 (use 8 ohm speaker with 220 ohm series resistor to earth)
+// Tone out on D8 (filter before injecting into audio amp; can use piezo or 8 ohm speaker with 220 ohm series resistor to gnd)
 // Pushbuttons for 2 (hard-coded) messages are on D9 and D10 (for additional memories, see notes below)
+//   (squeezing the paddle interrupts the message) 
 // Paddle left and right are D11 and D12 (center earthed) 
 // Wiper of potentiometer across 5v to A3 (keyer speed)
 // All other parameters are #define'd at the top and should be self-explanatory.
@@ -29,6 +30,7 @@
 // 4. At line #405 add a test for the additional keyer memory, and increment the morse_msg[] index
 //      if(get_button(PIN_KEYER_MEM3)) play_message(morse_msg[2], 0);                                      
 //--------------------------------------------------------------------------------------------------------------
+
 // CW Ident (sends callsign every n seconds),   
 // to activate this feature, #define CW_IDENT and set CW_IDENT_SECS:
 // #define CW_IDENT   // uncomment to activate CW Ident 
@@ -40,19 +42,20 @@
 #define PIN_KEY_LINE       2  // digital pin for the key line (mirrors PIN_TONE_OUT)
 #define PIN_PTT_LINE       3  // digital pin for the PTT line (to activate a transmitter)
 #define PIN_TONE_OUT       8  // digital pin with keyed audio side-tone on it
-#define PIN_PADDLE_R      11  // digital pin for paddle left (dot)
-#define PIN_PADDLE_L      12  // digital pin for paddle right (dash)
 
 #define PIN_KEYER_MEM1     9  // digital pin to read pushbutton Keyer Memory 1 
 #define PIN_KEYER_MEM2    10  // digital pin to read pushbutton Keyer Memory 2 
 // for additional keyer memories, #define other digital pins here (suggest D4, D5, D6, or D7)
 // #define PIN_KEYER_MEM3  4 // digital pin to read pushbutton Keyer Memory 3 
 
-#define PIN_KEYER_SPEED    3  // analogue pin for speed potentiometer  
+#define PIN_PADDLE_R      11  // digital pin for paddle left (dot)
+#define PIN_PADDLE_L      12  // digital pin for paddle right (dash)
+
+#define PIN_KEYER_SPEED    3  // analogue input for speed potentiometer (wire from +5v to GND)  
 #define CW_TONE_HZ       700  // CW tone frequency (Hz)  
 
-#define CW_DASH_LEN        5  // length of dash (in dots)  (typically 3 to 5, changeto suit your preference) 
-#define BREAK_IN_DELAY   500  // break-in hang time (mS)
+#define CW_DASH_LEN        4  // length of dash (in dots)  (typically 3 to 5, change to suit your preference) 
+#define BREAK_IN_DELAY   300  // break-in hang time (mS)
 #define SERIAL_LINE_WIDTH 80  // number of chars on Serial console, after which we write a newline 
 
 
@@ -335,13 +338,12 @@ void play_message(String m, int s)
 
   digitalWrite(PIN_PTT_LINE, 1); // turn transmitter on 
 
+  bool abort = FALSE;
+  byte i=0; 
   
-  for (i=0; i<m.length(); i++)
+  while(!abort and i < m.length())
   {
-    if(buff[i] == ' ') 
-    {
-       send_word_space(); 
-    }
+    if(buff[i] == ' ') send_word_space(); 
     else
     {
       if( (n = morse_lookup(buff[i])) == -1 )
@@ -355,14 +357,18 @@ void play_message(String m, int s)
       {
         // char found, so send it as dots and dashes
         // Serial.println(n);
-        for(j=1; j<7; j++)
-          send_morse_char(MorseCode[n].ch[j]);
+        for(j=1; j<7; j++) send_morse_char(MorseCode[n].ch[j]);
         send_letter_space();  // send an inter-letter space
-        if(s==0) 
-          read_keyer_speed();  // see if speed has changed mid message 
+
+        // check the keyer speed potentiometer (it may have changed!)
+        if(s==0) read_keyer_speed();  // if speed has changed mid message 
+        
+        // if both paddle sides are closed, abort the message
+        if(get_button(PIN_PADDLE_L) and get_button(PIN_PADDLE_R)) abort = TRUE; 
       } // else
-    } // else 
-  } // for  
+    } // else
+    i++;
+  } // while  
   
   Serial.println();
   if(s > 0)  // reset speed back to what it was  
