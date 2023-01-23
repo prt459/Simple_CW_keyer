@@ -10,7 +10,9 @@ The scripts assumes the following use of Nano IO lines:
 
 D2 - keyed line, goes high with each key-down (dot or dash)  
 
-D3 - PTT line, goes high while transmitting, then reverts to low after BREAK_IN_DELAY mS (set to 800)   
+D3 - PTT line, goes high while transmitting, then reverts to low after BREAK_IN_DELAY mS (set to 300)   
+
+D4 - straight key (to GND)
 
 D8 - a square wave tone output at CW_TONE_HZ Hz (set to 700) 
 
