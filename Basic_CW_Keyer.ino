@@ -167,13 +167,13 @@ int morse_lookup(char c)
 bool get_button(byte btn)
 {
 // Read the digital pin 'btn', with debouncing; pins are pulled up (ie. default is HIGH)
-// returns TRUE if pin is high, FALSE otherwise 
+// returns true (1) if pin is high, false (0) otherwise 
   if (!digitalRead(btn)) 
   {
     delay(5);  // was 20mS, needs to be long enough to ensure debouncing
-    if (!digitalRead(btn)) return 1;   // return TRUE
+    if (!digitalRead(btn)) return 1;   // return true
   }
-  return 0;  // return FALSE
+  return 0;  // return false
 }
 
 int read_analogue_pin(byte p)
@@ -360,7 +360,7 @@ void play_message(String m, int s)
 
   digitalWrite(PIN_PTT_LINE, 1); // turn transmitter on 
 
-  bool abort = FALSE;
+  bool abort = false;
   byte i=0; 
   
   while(!abort and i < m.length())
@@ -386,7 +386,7 @@ void play_message(String m, int s)
         if(s==0) read_keyer_speed();  // if speed has changed mid message 
         
         // if both paddle sides are closed, abort the message
-        if(get_button(PIN_PADDLE_L) and get_button(PIN_PADDLE_R)) abort = TRUE; 
+        if(get_button(PIN_PADDLE_L) and get_button(PIN_PADDLE_R)) abort = true; 
       } // else
     } // else
     i++;
