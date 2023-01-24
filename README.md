@@ -1,9 +1,6 @@
 # Simple_CW_keyer
-Basic CW keyer for an Arduino Nano.
-
-Wtitten by Paul VK3HN, 7 Apr 2017.  
+Basic CW keyer for an Arduino Nano.  Written by Paul VK3HN, 7 Apr 2017.  
 A description and wiring diagram is at https://vk3hn.wordpress.com/Arduino-CW-keyer-for-a-BiTx-or-other-homebrew-rig
-
 This code may be duplicated, used, and hacked for hobby or experimental purposes. Please acknowledge the source (VK3HN) if you do.
 
 Features:
@@ -15,21 +12,14 @@ Features:
  - semi-break-in, PTT line to control transmit/receive switching, with configurable drop-out delay  
  - CW ident (sends hard-coded message (eg. callsign) every n seconds   
 
-
 The scripts assumes the following use of Nano IO lines: 
 
 D2 - keyed line, goes high with each key-down (dot or dash)  
-
 D3 - PTT line, goes high while transmitting, then reverts to low after BREAK_IN_DELAY mS (set to 300)   
-
 D4 - straight key (to GND)
-
 D8 - a square wave tone output at CW_TONE_HZ Hz (set to 700) 
-
 D9 & 10 - Pushbuttons to earth for 2 (hardcoded) messages, you can add more
-
 D11 & D12 - paddle left and right, paddle center earthed 
-
 A3 - Potentiometer wiper across 5v for keyer speed control. 
 
 You can connect an 8 ohm speaker to D8 with a 220 ohm series resistor for audible tone.
@@ -48,3 +38,7 @@ NOTE: The master code includes enums -- these may generate compile time errros l
   variable or field ‘set_key_state’ declared void
   
   A version without enums is on branch 'sans_enums' -- if you have problems compiling the master, use the code on this branch instead.  
+
+#Acknowledgment
+  Hidehiko JA9MAT - thanks for suggesting addition of a 'straight key' mode, and for testing.
+  Victor R3QX -- thanks for suggesting keyer memory playback interrupt (squeeze both sides of paddle).  
