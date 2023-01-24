@@ -44,6 +44,7 @@
 
 // CW Ident (sends callsign every n seconds),   
 // to activate this feature, #define CW_IDENT and set CW_IDENT_SECS:
+
 // #define CW_IDENT   // uncomment to activate CW Ident 
 #define CW_IDENT_SECS     180  // seconds between CW ident 
 #define CW_IDENT_WPM      70  // CW ident speed (dot length mS)
@@ -156,7 +157,7 @@ String morse_msg[] =
 int morse_lookup(char c)
 // returns the index of parameter 'c' in MorseCode array, or -1 if not found
 {
-  for(int i=0; i<sizeof(MorseCode); i++)
+  for(unsigned int i=0; i<sizeof(MorseCode); i++)
   {
     if(c == MorseCode[i].ch[0])
       return i;
@@ -363,7 +364,7 @@ void play_message(String m, int s)
   bool abort = false;
   i=0; 
   
-  while(!abort and i < m.length())
+  while((unsigned int)!abort and (i < m.length()))
   {
     if(buff[i] == ' ') send_word_space(); 
     else
