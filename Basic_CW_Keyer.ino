@@ -325,7 +325,7 @@ void send_morse_char(char c)
   // ignore anything else, including 0s
 }
 
-void straight_key_send()
+void send_straight_key()
 {
   // straight key is closed, so send until it goes open
   tone(PIN_TONE_OUT, CW_TONE_HZ);
