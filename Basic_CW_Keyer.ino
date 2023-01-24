@@ -361,7 +361,7 @@ void play_message(String m, int s)
   digitalWrite(PIN_PTT_LINE, 1); // turn transmitter on 
 
   bool abort = false;
-  byte i=0; 
+  i=0; 
   
   while(!abort and i < m.length())
   {
