@@ -41,4 +41,4 @@ NOTE: The master code includes enums -- these may generate compile time errros l
 
 #Acknowledgment
   Hidehiko JA9MAT - thanks for suggesting addition of a 'straight key' mode, and for testing.
-  Victor R3QX -- thanks for suggesting keyer memory playback interrupt (squeeze both sides of paddle).  
+  Victor R3QX -- thanks for suggesting keyer memory playback interrupt (tap paddle or key).  
