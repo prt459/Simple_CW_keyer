@@ -385,9 +385,10 @@ void play_message(String m, int s)
 
         // check the keyer speed potentiometer (it may have changed!)
         if(s==0) read_keyer_speed();  // if speed has changed mid message 
-        
-        // if both paddle sides are closed, abort the message
-        if(get_button(PIN_PADDLE_L) and get_button(PIN_PADDLE_R)) abort = true; 
+                
+        // you can interrupt messages with a left tap or right tap 
+        if(get_button(PIN_PADDLE_L)) abort = true; 
+        if(get_button(PIN_PADDLE_R)) abort = true; 
       } // else
     } // else
     i++;
