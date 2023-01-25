@@ -14,9 +14,9 @@
 // Arduino connections: --------------------------------------------------------------------------------------         
 // Keyed line is D2 
 // PTT line (to activate a transmitter) is D3 (works for both keyer and straight key)
-// Tone out on D8 (filter before injecting into audio amp; can use piezo or 8 ohm speaker with 220 ohm series resistor to GND)
+// Sidetone on D8 (use R-C filter before injecting into audio amp; can use piezo or 8 ohm speaker with 220 ohm series resistor to GND)
 // Pushbuttons for 2 (hard-coded) messages are on D9 and D10 (for additional memories, see notes below)
-//   (squeezing the paddle interrupts the message) 
+//   (tapping paddle or key interrupts the message) 
 // Paddle left and right are D11 and D12 (center GND) 
 // Straight key may be connected to D4
 // Wiper of potentiometer across 5v to A3 (keyer speed)
@@ -27,10 +27,10 @@
 //
 // 1. Decide which Arduino digital pin you will use for the additional memory pushbutton (D5 to D7 are avalable) 
 //
-// 2. At line #27 add addtiional $define for the new memory pushbutton (a third memory pushbutton shown here)
+// 2. Around line #62 add additional #define for the new memory pushbutton (a third memory pushbutton shown here)
 //       #define PIN_KEYER_MEM3     5  // digital pin to read pushbutton Keyer Memory 3 
 //
-// 3. At line #109 Add additional pre-coded keyer message to the msg array 
+// 3. At line #152 Add additional pre-coded keyer message to the msg array 
 //       String morse_msg[] = 
 //       {
 //          "CQ CQ DE VK3HN VK3HN K"
@@ -38,7 +38,9 @@
 //          , "Message 3"  
 //       };
 //
-// 4. At line #405 add a test for the additional keyer memory, and increment the morse_msg[] index
+// 4. Around line #422 add  pinMode(PIN_KEYER_MEM3,INPUT_PULLUP);
+//
+// 5. At line #460 add a test for the additional keyer memory, and increment the morse_msg[] index
 //      if(get_button(PIN_KEYER_MEM3)) play_message(morse_msg[2], 0);                                      
 //--------------------------------------------------------------------------------------------------------------
 
@@ -144,11 +146,11 @@ morse_char_t MorseCode[] = {
 };
 
 // This array of Strings holds the predefined (compiled) keyer memory messages, edit to suit your needs.
-// To add additional memory messages, simply add additional stings in double quotes, separated by a comma.  
+// To add additional memory messages, simply add additional stings in double quotes, preceded by a comma.  
 String morse_msg[] = 
 {
-    "CQ CQ DE VK3HN VK3HN K" 
-  , "CQ CQ SOTA DE VK3HN/P VK3HN/P K" 
+    "CQ CQ DE VK3HN K" 
+  , "CQ SOTA DE VK3HN/P K" 
 // , "message 3"  
 // , "message 4"  
 // , "message  5 etc"  
@@ -195,8 +197,8 @@ int read_keyer_speed()
   // analog pin PIN_KEYER_SPEED.  You can adjust the range by reducing the voltage range
   // with resistors either side of the potentiometer; or, scale here in the code.
   int n = read_analogue_pin((byte)PIN_KEYER_SPEED);
-  //Serial.print("Speed returned=");
-  //Serial.println(n);
+  //Serial.print("Speed returned="); Serial.println(n);
+  
   dot_length_ms = 60 + (n-183)/5;   // scale to wpm (10 wpm == 60mS dot length)
                                      // '511' should be mid point of returned range
                                      // change '5' to widen/narrow speed range...
@@ -206,7 +208,7 @@ int read_keyer_speed()
 
 void set_key_state(key_state_e k)
 {
-// push the morse key down, or let it spring back up
+// push the paddle/key down, or let it spring back up
 // changes global 'key_state' {E_KEY_DOWN, E_KEY_UP}
 
   switch (k)
@@ -237,7 +239,7 @@ void set_key_state(key_state_e k)
 
 void activate_state(trx_state_e s)
 {
-// if necessary, activate the receiver or the transmitter 
+// performs PTT control -- if necessary, activate the receiver or the transmitter 
 // changes global 'curr_state' {E_STATE_RX, E_STATE_TX}
   switch (s)
   {
@@ -281,7 +283,7 @@ void send_dot()
 {
   delay(dot_length_ms);  // wait for one dot period (space)
 
-  // send a dot and the following space
+  // send a dot 
   tone(PIN_TONE_OUT, CW_TONE_HZ);
   set_key_state(E_KEY_DOWN);
   if(ch_counter % SERIAL_LINE_WIDTH == 0) Serial.println(); 
@@ -295,7 +297,7 @@ void send_dot()
 void send_dash()
 {
   delay(dot_length_ms);  // wait for one dot period (space)
-  // send a dash and the following space
+  // send a dash 
   tone(PIN_TONE_OUT, CW_TONE_HZ);
   set_key_state(E_KEY_DOWN); 
   if(ch_counter % SERIAL_LINE_WIDTH == 0) Serial.println(); 
@@ -320,10 +322,10 @@ void send_word_space()
 
 void send_morse_char(char c)
 {
-  // 'c' is a '.' or '-' char, so send it 
+  // 'c' is a '.' or '-' char, send it 
   if(c == '.') send_dot();
   else if (c == '-') send_dash();
-  // ignore anything else, including 0s
+  // ignore anything else
 }
 
 void send_straight_key()
@@ -366,6 +368,7 @@ void play_message(String m, int s)
   
   while((unsigned int)!abort and (i < m.length()))
   {
+    // iterate thru the message string 
     if(buff[i] == ' ') send_word_space(); 
     else
     {
@@ -386,9 +389,10 @@ void play_message(String m, int s)
         // check the keyer speed potentiometer (it may have changed!)
         if(s==0) read_keyer_speed();  // if speed has changed mid message 
                 
-        // you can interrupt messages with a left tap or right tap 
+        // you can interrupt messages with a left tap or right tap on the paddle
         if(get_button(PIN_PADDLE_L)) abort = true; 
         if(get_button(PIN_PADDLE_R)) abort = true; 
+        if(get_button(PIN_STRAIGHT_KEY)) abort = true;  // ...or a tap on the straight key
       } // else
     } // else
     i++;
@@ -458,7 +462,7 @@ void loop()
   if(get_button(PIN_KEYER_MEM2)) play_message(morse_msg[1], 0); 
 //   if(get_button(PIN_KEYER_MEM3)) play_message(morse_msg[2], 0); 
 
-  // see if the paddle has been pressed
+  // see if the paddle or key has been pressed
   bool l_paddle = get_button(PIN_PADDLE_L);
   bool r_paddle = get_button(PIN_PADDLE_R);
   bool straight_key = get_button(PIN_STRAIGHT_KEY); 
@@ -469,7 +473,7 @@ void loop()
   if(straight_key) send_straight_key();
   if(l_paddle) send_dot();
   if(r_paddle) send_dash();
-  if(l_paddle and r_paddle) // paddle_squeezed = true;
+  if(l_paddle and r_paddle) // paddle is being squeezed
   {
      send_dot();
      send_dash();
@@ -490,6 +494,7 @@ void loop()
 #ifdef CW_IDENT
   if(abs(curr_ms - last_ident_ms) > 1000)
   {
+    // at a second boundary
     ident_secs_count++;
     last_ident_ms = curr_ms;
     if(ident_secs_count%10 == 0)
@@ -506,6 +511,5 @@ void loop()
     ident_secs_count = 0;
   }
 #endif 
-
   //-- CW ident code end ------------------------------------------------
 }
