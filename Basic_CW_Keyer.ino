@@ -363,10 +363,10 @@ void play_message(String m, int s)
 
   digitalWrite(PIN_PTT_LINE, 1); // turn transmitter on 
 
-  bool abort = false;
+  bool abort_flg = false;
   i=0; 
   
-  while((unsigned int)!abort and (i < m.length()))
+  while((unsigned int)!abort_flg and (i < m.length()))
   {
     // iterate thru the message string 
     if(buff[i] == ' ') send_word_space(); 
@@ -390,9 +390,9 @@ void play_message(String m, int s)
         if(s==0) read_keyer_speed();  // if speed has changed mid message 
                 
         // you can interrupt messages with a left tap or right tap on the paddle
-        if(get_button(PIN_PADDLE_L)) abort = true; 
-        if(get_button(PIN_PADDLE_R)) abort = true; 
-        if(get_button(PIN_STRAIGHT_KEY)) abort = true;  // ...or a tap on the straight key
+        if(get_button(PIN_PADDLE_L)) abort_flg = true; 
+        if(get_button(PIN_PADDLE_R)) abort_flg = true; 
+        if(get_button(PIN_STRAIGHT_KEY)) abort_flg = true;  // ...or a tap on the straight key
       } // else
     } // else
     i++;
